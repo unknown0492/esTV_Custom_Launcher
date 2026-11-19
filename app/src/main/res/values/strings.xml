@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">esTV Custom Launcher</string>
+    <string name="menu">Menu</string>
+    <string name="secret_menu">Secret Menu</string>
+    <string name="auto_allow_description">Presses Install and Allow on the Android installer and permission screens, so app updates from the CMS finish without a remote. It acts only on those system screens.</string>
+    <string name="app_not_installed">%1$s is not installed on this box</string>
+    <string name="app_cannot_open">%1$s could not be opened</string>
+</resources>

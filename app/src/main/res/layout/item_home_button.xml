@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One row of the Home Buttons list: position, name, package / activity -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/list_item_bg"
+    android:gravity="center_vertical"
+    android:minHeight="56dp"
+    android:orientation="horizontal"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp">
+
+    <TextView
+        android:id="@+id/tv_position"
+        android:layout_width="40dp"
+        android:layout_height="wrap_content"
+        android:textColor="@color/secret_heading"
+        android:textSize="@dimen/secret_text" />
+
+    <TextView
+        android:id="@+id/tv_name"
+        android:layout_width="260dp"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:singleLine="true"
+        android:textColor="@color/white"
+        android:textSize="@dimen/secret_text" />
+
+    <TextView
+        android:id="@+id/tv_target"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:ellipsize="middle"
+        android:singleLine="true"
+        android:textColor="@color/secret_value"
+        android:textSize="15sp" />
+
+    <TextView
+        android:id="@+id/tv_installed"
+        android:layout_width="140dp"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:textColor="@color/secret_heading"
+        android:textSize="15sp" />
+</LinearLayout>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Row of the Home buttons list: highlighted when focused -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/secret_button" />
+            <stroke android:width="3dp" android:color="@color/white" />
+        </shape>
+    </item>
+    <item android:state_selected="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/secret_button" />
+            <stroke android:width="3dp" android:color="@color/white" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/secret_label" />
+        </shape>
+    </item>
+</selector>

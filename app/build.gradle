@@ -1,0 +1,81 @@
+plugins {
+    id 'com.android.application'
+}
+
+/**
+ * Reads a .properties file; an empty Properties when the file is missing
+ * @param f File to read
+ * @return Properties
+ */
+static Properties readProps( File f ) {
+    def props = new Properties()
+    if( f.exists() ) {
+        f.withInputStream { props.load( it ) }
+    }
+    return props
+}
+
+// eslink app_id / secret for the CMS-address fallback (secrets.properties is not in git)
+def secrets = readProps( rootProject.file( 'secrets.properties' ) )
+
+android {
+    namespace 'com.excel.estvlauncher.custom'
+    compileSdk 34
+
+    signingConfigs {
+        def props = readProps( file( 'keystore.properties' ) )
+
+        debug {
+            storeFile file( props['storeFile'] )
+            storePassword props['storePassword']
+            keyAlias props['keyAlias']
+            keyPassword props['keyPassword']
+        }
+        release {
+            storeFile file( props['storeFile'] )
+            storePassword props['storePassword']
+            keyAlias props['keyAlias']
+            keyPassword props['keyPassword']
+        }
+    }
+
+    defaultConfig {
+        applicationId "com.excel.estvlauncher.custom"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
+
+        archivesBaseName = "esTV_Custom_Launcher_v" + versionName
+
+        buildConfigField "String", "ESLINK_APP_ID",     "\"" + secrets.getProperty( 'ESLINK_APP_ID', '' ) + "\""
+        buildConfigField "String", "ESLINK_APP_SECRET", "\"" + secrets.getProperty( 'ESLINK_APP_SECRET', '' ) + "\""
+        buildConfigField "String", "ESLINK_BASE_URL",   "\"" + secrets.getProperty( 'ESLINK_BASE_URL', 'https://eslink.online/' ) + "\""
+
+        signingConfig signingConfigs.release
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+            debuggable true
+        }
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+}

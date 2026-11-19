@@ -1,0 +1,19 @@
+# Build output
+/build
+/app/build
+.gradle
+.externalNativeBuild
+.cxx
+/captures
+*.apk
+*.aab
+
+# Machine-specific and secret files (never committed)
+local.properties
+secrets.properties
+app/keystore.properties
+
+# IDE
+*.iml
+.idea/
+.DS_Store

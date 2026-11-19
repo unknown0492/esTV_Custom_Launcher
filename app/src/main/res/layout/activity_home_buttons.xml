@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Secret Menu > Home Buttons: the app buttons shown after Menu on the home screen -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black"
+    android:orientation="vertical"
+    android:padding="40dp"
+    tools:context=".HomeButtonsActivity">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="Home Buttons"
+        android:textColor="@color/secret_heading"
+        android:textSize="22sp" />
+
+    <TextView
+        android:id="@+id/tv_source"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="20dp"
+        android:gravity="center"
+        android:textColor="@color/secret_value"
+        android:textSize="15sp" />
+
+    <ListView
+        android:id="@+id/lv_buttons"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:choiceMode="singleChoice"
+        android:divider="@android:color/transparent"
+        android:dividerHeight="@dimen/secret_row_margin"
+        android:listSelector="@android:color/transparent" />
+
+    <TextView
+        android:id="@+id/tv_empty"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:text="No app buttons. Only Menu is shown on the home screen."
+        android:textColor="@color/secret_value"
+        android:textSize="@dimen/secret_text"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/bt_add"
+            style="@style/SecretButton"
+            android:layout_width="220dp"
+            android:layout_weight="0"
+            android:layout_marginEnd="@dimen/secret_row_margin"
+            android:text="Add Button" />
+
+        <Button
+            android:id="@+id/bt_use_cms"
+            style="@style/SecretButton"
+            android:layout_width="220dp"
+            android:layout_weight="0"
+            android:layout_marginEnd="@dimen/secret_row_margin"
+            android:text="Use CMS Buttons" />
+
+        <Button
+            android:id="@+id/bt_back"
+            style="@style/SecretButton"
+            android:layout_width="220dp"
+            android:layout_weight="0"
+            android:text="Back" />
+    </LinearLayout>
+</LinearLayout>
