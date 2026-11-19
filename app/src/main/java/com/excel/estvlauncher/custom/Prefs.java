@@ -42,6 +42,7 @@ public final class Prefs {
     private static final String K_FAILED_APKS      = "failed_apks";
     private static final String K_PENDING_INSTALLS = "pending_installs";
     private static final String K_SECRET_REFUSED   = "eslink_secret_refused_for";
+    private static final String K_DISPLAY_APPLIED  = "display_applied";
 
     private final SharedPreferences sp;
 
@@ -280,6 +281,16 @@ public final class Prefs {
     /** Clears the failed list ("Check now" retries everything) */
     public void clearFailedApks() {
         sp.edit().remove( K_FAILED_APKS ).apply();
+    }
+
+    /** @return The CMS display target last applied ("scale|mode"), so each target is applied once */
+    public String getDisplayApplied() {
+        return sp.getString( K_DISPLAY_APPLIED, "" );
+    }
+
+    /** @param key Display target just applied ("" = apply the next one again) */
+    public void setDisplayApplied( String key ) {
+        sp.edit().putString( K_DISPLAY_APPLIED, key ).apply();
     }
 
     /**

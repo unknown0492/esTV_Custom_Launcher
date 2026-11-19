@@ -17,11 +17,11 @@ import android.widget.Toast;
 
 /**
  * The Secret Menu (opened by Menu on the home screen). Same look as esTVLauncher's ShortcutsActivity, without
- * room number / OTS / screen size, plus: box name, home buttons, CMS address, property, check-in, permission helper.
+ * room number / OTS / screen size, plus: box name, home buttons, CMS address, property ID and name, check-in, permission helper.
  */
 public class SecretMenuActivity extends Activity implements CheckInManager.Listener {
 
-    private TextView tvMac, tvFirmware, tvVersion, tvInterface, tvProperty;
+    private TextView tvMac, tvFirmware, tvVersion, tvInterface, tvPropertyId, tvPropertyName;
     private Button   btBoxName, btIp, btCms, btLastCheckIn, btCheckNow, btHomeButtons, btAutoAllow;
 
     /**
@@ -38,7 +38,8 @@ public class SecretMenuActivity extends Activity implements CheckInManager.Liste
         tvFirmware    = findViewById( R.id.tv_firmware_version );
         tvVersion     = findViewById( R.id.tv_launcher_version );
         tvInterface   = findViewById( R.id.tv_interface );
-        tvProperty    = findViewById( R.id.tv_property );
+        tvPropertyId   = findViewById( R.id.tv_property_id );
+        tvPropertyName = findViewById( R.id.tv_property_name );
         btBoxName     = findViewById( R.id.bt_box_name );
         btIp          = findViewById( R.id.bt_ip_address );
         btCms         = findViewById( R.id.bt_cms );
@@ -177,8 +178,9 @@ public class SecretMenuActivity extends Activity implements CheckInManager.Liste
         Prefs prefs = new Prefs( this );
         btBoxName.setText( prefs.getBoxName().isEmpty() ? "Set Box Name" : prefs.getBoxName() );
         btCms.setText( prefs.getCmsHost() + ":" + prefs.getCmsPort() );
-        String property = prefs.getPropertyId();
-        tvProperty.setText( property.isEmpty() ? "Not known yet (from the CMS)" : property + ( prefs.getPropertyName().isEmpty() ? "" : "  " + prefs.getPropertyName() ) );
+        // Both come from the CMS at the first check-in
+        tvPropertyId.setText( prefs.getPropertyId().isEmpty() ? "Not known yet" : prefs.getPropertyId() );
+        tvPropertyName.setText( prefs.getPropertyName().isEmpty() ? "Not known yet" : prefs.getPropertyName() );
         btLastCheckIn.setText( prefs.getLastResult() );
         int count = prefs.getButtons().size();
         btHomeButtons.setText( "Edit (" + count + ( Prefs.SOURCE_LOCAL.equals( prefs.getButtonsSource() ) ? ", changed on this box)" : ", from CMS)" ) );

@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Home screen buttons: all the same size -->
-    <dimen name="home_button_width">280dp</dimen>
-    <dimen name="home_button_height">100dp</dimen>
-    <dimen name="home_button_margin">16dp</dimen>
-    <dimen name="home_button_text">24sp</dimen>
+    <dimen name="home_button_width">140dp</dimen>
+    <dimen name="home_button_height">50dp</dimen>
+    <dimen name="home_button_margin">8dp</dimen>
+    <dimen name="home_button_text">12sp</dimen>
 
     <!-- Secret Menu rows, as in esTVLauncher -->
     <dimen name="secret_label_width">220dp</dimen>
     <dimen name="secret_row_height">43dp</dimen>
     <dimen name="secret_row_margin">10dp</dimen>
     <dimen name="secret_text">17sp</dimen>
+    <!-- Long values (property name): up to 3 lines inside one row -->
+    <dimen name="secret_text_small">12sp</dimen>
 </resources>

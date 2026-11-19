@@ -124,6 +124,7 @@ public final class CheckInManager {
         Prefs prefs = new Prefs( context );
         if( force ) {
             prefs.clearFailedApks();
+            prefs.setDisplayApplied( "" );
         }
         resolvePendingInstalls( context, prefs );
 
@@ -241,7 +242,8 @@ public final class CheckInManager {
                     .put( "buttons_rev", prefs.getButtonsRev() )
                     .put( "apk_results", prefs.getApkResults() )
                     .put( "firmware", DeviceInfo.getFirmware() )
-                    .put( "android", Build.VERSION.RELEASE );
+                    .put( "android", Build.VERSION.RELEASE )
+                    .put( "display", DisplayHelper.report() );
         }
         catch( JSONException e ) {
             throw new IOException( "request could not be built" );
@@ -274,9 +276,40 @@ public final class CheckInManager {
         }
 
         String wallpaperNote = applyWallpaper( context, prefs, a.optJSONObject( "wallpaper" ) );
+        String displayNote   = applyDisplay( prefs, a.optJSONObject( "display" ) );
         String apkNote       = applyApks( context, prefs, a.optJSONArray( "apks" ) );
 
-        prefs.setLastResult( stamp() + " OK (CMS " + prefs.getCmsHost() + ":" + prefs.getCmsPort() + ")" + wallpaperNote + apkNote, true );
+        prefs.setLastResult( stamp() + " OK (CMS " + prefs.getCmsHost() + ":" + prefs.getCmsPort() + ")" + wallpaperNote + displayNote + apkNote, true );
+    }
+
+    /**
+     * Applies the CMS's screen size / resolution for this box (the box's own override, else the hotel's). Each
+     * target is applied once: a resolution the TV refuses is not retried every 5 minutes (it would make the
+     * picture flicker); "Check now" applies it again.
+     *
+     * @param prefs   Stored state
+     * @param display { scale: 80-100 or 0 = leave, mode: name or "" = leave } or null
+     * @return Note for the result text ("" when nothing happened)
+     */
+    private static String applyDisplay( Prefs prefs, JSONObject display ) {
+        if( display == null || !DisplayHelper.isAvailable() ) {
+            return "";
+        }
+        int    scale = display.optInt( "scale", 0 );
+        String mode  = display.optString( "mode", "" );
+        String key   = scale + "|" + mode;
+        if( key.equals( prefs.getDisplayApplied() ) ) {
+            return "";
+        }
+        StringBuilder note = new StringBuilder();
+        if( scale > 0 && DisplayHelper.getScale() != scale ) {
+            note.append( DisplayHelper.setScale( scale ) ? ". Screen size " + scale + "%" : ". Screen size " + scale + "% FAILED" );
+        }
+        if( !mode.isEmpty() && !mode.equals( DisplayHelper.getMode() ) ) {
+            note.append( DisplayHelper.setMode( mode ) ? ". Resolution " + mode : ". Resolution " + mode + " FAILED" );
+        }
+        prefs.setDisplayApplied( key );
+        return note.toString();
     }
 
     /**
