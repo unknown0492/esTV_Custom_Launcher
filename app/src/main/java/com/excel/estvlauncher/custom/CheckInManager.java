@@ -130,7 +130,7 @@ public final class CheckInManager {
 
         String error;
         try {
-            handleAnswer( context, prefs, callCms( context, prefs ) );
+            checkInAndReport( context, prefs );
             return;
         }
         catch( CmsRefused e ) {                       // The CMS answered: no eslink fallback
@@ -145,7 +145,7 @@ public final class CheckInManager {
         String note = askEslink( prefs );
         if( note == null ) {                          // eslink gave an address: once more
             try {
-                handleAnswer( context, prefs, callCms( context, prefs ) );
+                checkInAndReport( context, prefs );
                 return;
             }
             catch( CmsRefused e ) {
@@ -158,6 +158,30 @@ public final class CheckInManager {
             }
         }
         prefs.setLastResult( stamp() + " CMS " + prefs.getCmsHost() + ":" + prefs.getCmsPort() + " unreachable (" + error + "). " + note, false );
+    }
+
+    /**
+     * One check-in with the CMS. When it installed or failed an APK, or changed the screen size / resolution,
+     * the box sends one more check-in at once, only to report the result, so the CMS shows it within seconds
+     * instead of at the next check-in 5 minutes later. That second answer is not applied (no loop).
+     *
+     * @param context Context
+     * @param prefs   Stored state
+     * @throws IOException When the CMS cannot be reached
+     * @throws CmsRefused  When the CMS answered with an error
+     */
+    private static void checkInAndReport( Context context, Prefs prefs ) throws IOException, CmsRefused {
+        if( !handleAnswer( context, prefs, callCms( context, prefs ) ) ) {
+            return;
+        }
+        String result = prefs.getLastResult();
+        try {
+            callCms( context, prefs );
+            prefs.setLastResult( result + ". Reported to the CMS", true );
+        }
+        catch( Exception e ) {
+            Log.w( TAG, "Report after the changes failed (sent at the next check-in): " + e.getMessage() );
+        }
     }
 
     /** The CMS answered with an error */
@@ -251,13 +275,14 @@ public final class CheckInManager {
     }
 
     /**
-     * Applies a CMS answer: property, buttons, wallpaper, APKs
+     * Applies a CMS answer: property, buttons, wallpaper, display, APKs
      *
      * @param context Context
      * @param prefs   Stored state
      * @param a       CMS answer
+     * @return true when an APK was installed or failed, or the display was changed (worth reporting at once)
      */
-    private static void handleAnswer( Context context, Prefs prefs, JSONObject a ) {
+    private static boolean handleAnswer( Context context, Prefs prefs, JSONObject a ) {
         int interval = a.optInt( "interval_sec", 300 );
         intervalSec = Math.max( 60, Math.min( 3600, interval ) );
 
@@ -280,6 +305,7 @@ public final class CheckInManager {
         String apkNote       = applyApks( context, prefs, a.optJSONArray( "apks" ) );
 
         prefs.setLastResult( stamp() + " OK (CMS " + prefs.getCmsHost() + ":" + prefs.getCmsPort() + ")" + wallpaperNote + displayNote + apkNote, true );
+        return !displayNote.isEmpty() || !apkNote.isEmpty();
     }
 
     /**
