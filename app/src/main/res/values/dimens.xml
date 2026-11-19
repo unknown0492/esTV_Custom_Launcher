@@ -6,6 +6,12 @@
     <dimen name="home_button_margin">8dp</dimen>
     <dimen name="home_button_text">12sp</dimen>
 
+    <!-- Auto-start countdown pill at the bottom of the home screen -->
+    <dimen name="autostart_margin_bottom">40dp</dimen>
+    <dimen name="autostart_padding_h">20dp</dimen>
+    <dimen name="autostart_padding_v">8dp</dimen>
+    <dimen name="autostart_text">16sp</dimen>
+
     <!-- Secret Menu rows, as in esTVLauncher -->
     <dimen name="secret_label_width">220dp</dimen>
     <dimen name="secret_row_height">43dp</dimen>

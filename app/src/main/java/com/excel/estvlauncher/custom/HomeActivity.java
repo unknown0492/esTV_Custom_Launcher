@@ -7,12 +7,16 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.File;
@@ -22,6 +26,8 @@ import java.util.List;
 /**
  * The home screen (HOME): the wallpaper from the CMS and a centred row of equal buttons - Menu first (opens
  * the Secret Menu), then the app buttons from the CMS. Rows wrap when there are many buttons.
+ * Auto-start app (1.0.4): after boot, and after the home screen sat idle for the relaunch interval, a countdown
+ * at the bottom opens the auto-start app; any remote key cancels it.
  */
 public class HomeActivity extends Activity implements CheckInManager.Listener {
 
@@ -36,6 +42,21 @@ public class HomeActivity extends Activity implements CheckInManager.Listener {
     /** Buttons on screen, as JSON text, so the row is only rebuilt when it changed */
     private String shownButtons   = null;
 
+    /** Countdown before an app relaunch, at least this long so it can be cancelled */
+    private static final int MIN_RELAUNCH_COUNTDOWN_SEC = 3;
+
+    private final Handler handler = new Handler( Looper.getMainLooper() );
+    private TextView tvAutostart;
+
+    /** Seconds left of the running countdown, -1 = none */
+    private int    countdownLeft  = -1;
+    /** Label of the app being counted down to */
+    private String countdownLabel = "";
+    /** Key code whose release must also be swallowed (the press that cancelled a countdown) */
+    private int    swallowKeyUp   = -1;
+    /** Auto-start app + relaunch interval the idle wait was set for, so a check-in only restarts it on a change */
+    private String relaunchKey    = null;
+
     /**
      * Builds the screen
      *
@@ -47,6 +68,7 @@ public class HomeActivity extends Activity implements CheckInManager.Listener {
         setContentView( R.layout.activity_home );
         ivWallpaper = findViewById( R.id.iv_wallpaper );
         llButtons   = findViewById( R.id.ll_buttons );
+        tvAutostart = findViewById( R.id.tv_autostart );
     }
 
     /**
@@ -56,24 +78,174 @@ public class HomeActivity extends Activity implements CheckInManager.Listener {
     protected void onResume() {
         super.onResume();
         CheckInManager.addListener( this );
+        AutoStart.setResumedHome( this );
         refresh();
+        relaunchKey = null;
+        if( !checkBootAutostart() ) {
+            scheduleRelaunch();
+        }
     }
 
     /**
-     * Stops listening
+     * Stops listening and every auto-start timer (the Secret Menu or an app is in front now)
      */
     @Override
     protected void onPause() {
         super.onPause();
         CheckInManager.removeListener( this );
+        AutoStart.setResumedHome( null );
+        stopAutostartTimers();
     }
 
     /**
-     * A check-in finished: the wallpaper or the buttons may have changed
+     * A check-in finished: the wallpaper, the buttons or the auto-start app may have changed
      */
     @Override
     public void onCheckInFinished() {
         refresh();
+        if( countdownLeft < 0 && !relaunchKeyNow().equals( relaunchKey ) ) {
+            scheduleRelaunch();
+        }
+    }
+
+    /**
+     * Any remote key: cancels a running countdown (that key is swallowed) and restarts the idle wait
+     *
+     * @param event Key event
+     * @return true when the key was swallowed
+     */
+    @Override
+    public boolean dispatchKeyEvent( KeyEvent event ) {
+        if( event.getAction() == KeyEvent.ACTION_UP && event.getKeyCode() == swallowKeyUp ) {
+            swallowKeyUp = -1;
+            return true;
+        }
+        if( event.getAction() == KeyEvent.ACTION_DOWN ) {
+            if( countdownLeft >= 0 ) {
+                cancelCountdown();
+                swallowKeyUp = event.getKeyCode();
+                scheduleRelaunch();
+                return true;
+            }
+            scheduleRelaunch();
+        }
+        return super.dispatchKeyEvent( event );
+    }
+
+    /**
+     * Boot auto-start: right after boot (flag set by AutoStart at BOOT_COMPLETED) the countdown starts once.
+     * Called on resume and by AutoStart when the home screen was already in front at BOOT_COMPLETED.
+     *
+     * @return true when a boot countdown was started
+     */
+    boolean checkBootAutostart() {
+        Prefs prefs = new Prefs( this );
+        if( !prefs.isBootPending() ) {
+            return false;
+        }
+        prefs.setBootPending( false );
+        if( prefs.getAutostartPackage().isEmpty() ) {
+            return false;
+        }
+        stopAutostartTimers();
+        startCountdown( prefs.getAutostartDelaySec() );
+        return true;
+    }
+
+    /**
+     * Auto-start app + relaunch interval, as one text
+     *
+     * @return Key
+     */
+    private String relaunchKeyNow() {
+        Prefs prefs = new Prefs( this );
+        return prefs.getAutostartPackage() + "|" + prefs.getAutostartActivity() + "|" + prefs.getAutostartRelaunchMin();
+    }
+
+    /**
+     * (Re)starts the idle wait: when the home screen stays in front for the relaunch interval without a key
+     * press, the countdown to the auto-start app starts
+     */
+    private void scheduleRelaunch() {
+        handler.removeCallbacks( relaunchRunnable );
+        relaunchKey = relaunchKeyNow();
+        Prefs prefs = new Prefs( this );
+        if( prefs.getAutostartPackage().isEmpty() || prefs.getAutostartRelaunchMin() <= 0 || countdownLeft >= 0 ) {
+            return;
+        }
+        handler.postDelayed( relaunchRunnable, prefs.getAutostartRelaunchMin() * 60000L );
+    }
+
+    /** The idle wait is over: count down to the app */
+    private final Runnable relaunchRunnable = new Runnable() {
+        /**
+         * Starts the relaunch countdown
+         */
+        @Override
+        public void run() {
+            startCountdown( Math.max( MIN_RELAUNCH_COUNTDOWN_SEC, new Prefs( HomeActivity.this ).getAutostartDelaySec() ) );
+        }
+    };
+
+    /**
+     * Shows "Starting <app> in N s" and opens the app at 0; any key cancels (dispatchKeyEvent)
+     *
+     * @param seconds Countdown length (0 = open at once)
+     */
+    private void startCountdown( int seconds ) {
+        Prefs  prefs = new Prefs( this );
+        String pkg   = prefs.getAutostartPackage();
+        if( pkg.isEmpty() ) {
+            return;
+        }
+        if( !AutoStart.isInstalled( this, pkg ) ) {
+            Toast.makeText( this, getString( R.string.app_not_installed, pkg ), Toast.LENGTH_LONG ).show();
+            return;
+        }
+        countdownLabel = AutoStart.label( this, pkg );
+        countdownLeft  = Math.max( 0, seconds );
+        handler.removeCallbacks( tickRunnable );
+        handler.post( tickRunnable );
+    }
+
+    /** One second of the countdown */
+    private final Runnable tickRunnable = new Runnable() {
+        /**
+         * Shows the seconds left, or opens the app at 0
+         */
+        @Override
+        public void run() {
+            if( countdownLeft < 0 ) {
+                return;
+            }
+            if( countdownLeft == 0 ) {
+                cancelCountdown();
+                Prefs prefs = new Prefs( HomeActivity.this );
+                openApp( new HomeButton( countdownLabel, prefs.getAutostartPackage(), prefs.getAutostartActivity() ) );
+                return;
+            }
+            tvAutostart.setText( getString( R.string.autostart_countdown, countdownLabel, countdownLeft ) );
+            tvAutostart.setVisibility( View.VISIBLE );
+            countdownLeft--;
+            handler.postDelayed( this, 1000 );
+        }
+    };
+
+    /**
+     * Stops a running countdown and hides it
+     */
+    private void cancelCountdown() {
+        countdownLeft = -1;
+        handler.removeCallbacks( tickRunnable );
+        tvAutostart.setVisibility( View.GONE );
+    }
+
+    /**
+     * Stops the countdown and the idle wait
+     */
+    private void stopAutostartTimers() {
+        cancelCountdown();
+        handler.removeCallbacks( relaunchRunnable );
     }
 
     /**

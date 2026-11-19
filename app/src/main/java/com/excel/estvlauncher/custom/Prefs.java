@@ -43,6 +43,17 @@ public final class Prefs {
     private static final String K_PENDING_INSTALLS = "pending_installs";
     private static final String K_SECRET_REFUSED   = "eslink_secret_refused_for";
     private static final String K_DISPLAY_APPLIED  = "display_applied";
+    private static final String K_AS_PACKAGE       = "autostart_package";
+    private static final String K_AS_ACTIVITY      = "autostart_activity";
+    private static final String K_AS_SOURCE        = "autostart_source";
+    private static final String K_AS_REV           = "autostart_rev";
+    private static final String K_AS_DELAY         = "autostart_delay_sec";
+    private static final String K_AS_RELAUNCH      = "autostart_relaunch_min";
+    private static final String K_BOOT_PENDING     = "boot_autostart_pending";
+
+    /** Auto-start defaults until the CMS sends its values */
+    public static final int DEFAULT_AUTOSTART_DELAY_SEC    = 10;
+    public static final int DEFAULT_AUTOSTART_RELAUNCH_MIN = 10;
 
     private final SharedPreferences sp;
 
@@ -316,6 +327,82 @@ public final class Prefs {
     /** @param versionCode This build's versionCode (0 clears) */
     public void setSecretRefusedFor( int versionCode ) {
         sp.edit().putInt( K_SECRET_REFUSED, versionCode ).apply();
+    }
+
+    /** @return Package of the auto-start app ("" = none) */
+    public String getAutostartPackage() {
+        return sp.getString( K_AS_PACKAGE, "" );
+    }
+
+    /** @return Activity of the auto-start app ("" = the app's launcher activity) */
+    public String getAutostartActivity() {
+        return sp.getString( K_AS_ACTIVITY, "" );
+    }
+
+    /** @return "cms" or "local" (chosen in the Secret Menu) */
+    public String getAutostartSource() {
+        return sp.getString( K_AS_SOURCE, SOURCE_CMS );
+    }
+
+    /** @return CMS revision of the auto-start setting last applied ("" = none yet) */
+    public String getAutostartRev() {
+        return sp.getString( K_AS_REV, "" );
+    }
+
+    /**
+     * The CMS's auto-start app (replaces one chosen on this box: the newest change wins)
+     *
+     * @param packageName Package ("" = none)
+     * @param activity    Activity ("" = launcher activity)
+     * @param rev         CMS revision of this setting
+     */
+    public void setAutostartFromCms( String packageName, String activity, String rev ) {
+        sp.edit().putString( K_AS_PACKAGE, packageName ).putString( K_AS_ACTIVITY, activity )
+          .putString( K_AS_SOURCE, SOURCE_CMS ).putString( K_AS_REV, rev ).apply();
+    }
+
+    /**
+     * Auto-start app chosen in the Secret Menu; kept until the CMS's revision changes
+     *
+     * @param packageName Package ("" = none)
+     * @param activity    Activity ("" = launcher activity)
+     */
+    public void setAutostartLocal( String packageName, String activity ) {
+        sp.edit().putString( K_AS_PACKAGE, packageName ).putString( K_AS_ACTIVITY, activity )
+          .putString( K_AS_SOURCE, SOURCE_LOCAL ).apply();
+    }
+
+    /** Back to the CMS's auto-start app: the next check-in applies it (the stored revision no longer matches) */
+    public void resetAutostartToCms() {
+        sp.edit().putString( K_AS_SOURCE, SOURCE_CMS ).putString( K_AS_REV, "" ).apply();
+    }
+
+    /** @return Seconds after boot before the auto-start app opens (0-120) */
+    public int getAutostartDelaySec() {
+        return sp.getInt( K_AS_DELAY, DEFAULT_AUTOSTART_DELAY_SEC );
+    }
+
+    /** @return Minutes on the home screen without a key press before the app opens again (0 = never) */
+    public int getAutostartRelaunchMin() {
+        return sp.getInt( K_AS_RELAUNCH, DEFAULT_AUTOSTART_RELAUNCH_MIN );
+    }
+
+    /**
+     * @param delaySec    Seconds after boot (0-120)
+     * @param relaunchMin Minutes before reopening (0-1440, 0 = never)
+     */
+    public void setAutostartTiming( int delaySec, int relaunchMin ) {
+        sp.edit().putInt( K_AS_DELAY, delaySec ).putInt( K_AS_RELAUNCH, relaunchMin ).apply();
+    }
+
+    /** @return true from boot until the home screen has handled the boot auto-start */
+    public boolean isBootPending() {
+        return sp.getBoolean( K_BOOT_PENDING, false );
+    }
+
+    /** @param pending Boot auto-start still to be handled */
+    public void setBootPending( boolean pending ) {
+        sp.edit().putBoolean( K_BOOT_PENDING, pending ).commit();
     }
 
     /**

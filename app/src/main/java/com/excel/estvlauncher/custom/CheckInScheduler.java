@@ -17,7 +17,7 @@ public final class CheckInScheduler extends BroadcastReceiver {
     static final String ACTION_CHECK_IN = "com.excel.estvlauncher.custom.CHECK_IN";
 
     /**
-     * Alarm, boot or package-replaced: check in now
+     * Alarm, boot or package-replaced: check in now (at boot also the auto-start app, see AutoStart)
      *
      * @param context Context
      * @param intent  Broadcast
@@ -27,6 +27,9 @@ public final class CheckInScheduler extends BroadcastReceiver {
         String action = intent.getAction();
         if( !ACTION_CHECK_IN.equals( action ) && !Intent.ACTION_BOOT_COMPLETED.equals( action ) && !Intent.ACTION_MY_PACKAGE_REPLACED.equals( action ) ) {
             return;
+        }
+        if( Intent.ACTION_BOOT_COMPLETED.equals( action ) ) {
+            AutoStart.onBoot( context );
         }
         CheckInManager.checkIn( context, false );
         // If a check-in is already running it is skipped; make sure the chain continues anyway

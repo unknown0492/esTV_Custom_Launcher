@@ -21,4 +21,21 @@
         android:gravity="center"
         android:orientation="vertical" />
 
+    <!-- Auto-start countdown ("Starting <app> in N s - press any key to cancel"), shown by HomeActivity -->
+    <TextView
+        android:id="@+id/tv_autostart"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="@dimen/autostart_margin_bottom"
+        android:background="@drawable/autostart_pill"
+        android:gravity="center"
+        android:paddingStart="@dimen/autostart_padding_h"
+        android:paddingTop="@dimen/autostart_padding_v"
+        android:paddingEnd="@dimen/autostart_padding_h"
+        android:paddingBottom="@dimen/autostart_padding_v"
+        android:textColor="@color/white"
+        android:textSize="@dimen/autostart_text"
+        android:visibility="gone" />
+
 </FrameLayout>

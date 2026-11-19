@@ -21,7 +21,6 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
@@ -291,44 +290,9 @@ public class HomeButtonsActivity extends Activity {
      * @param draft    Values typed so far
      */
     private void pickApp( final int position, final HomeButton draft ) {
-        PackageManager pm = getPackageManager();
-        final List<ResolveInfo> apps = new ArrayList<>( pm.queryIntentActivities( new Intent( Intent.ACTION_MAIN ).addCategory( Intent.CATEGORY_LAUNCHER ), 0 ) );
-        for( ResolveInfo tv : pm.queryIntentActivities( new Intent( Intent.ACTION_MAIN ).addCategory( Intent.CATEGORY_LEANBACK_LAUNCHER ), 0 ) ) {
-            boolean known = false;
-            for( ResolveInfo a : apps ) {
-                if( a.activityInfo.name.equals( tv.activityInfo.name ) ) {
-                    known = true;
-                    break;
-                }
-            }
-            if( !known ) {
-                apps.add( tv );
-            }
-        }
-        // Not this launcher
-        for( int i = apps.size() - 1; i >= 0; i-- ) {
-            if( getPackageName().equals( apps.get( i ).activityInfo.packageName ) ) {
-                apps.remove( i );
-            }
-        }
-        final PackageManager fpm = pm;
-        Collections.sort( apps, new Comparator<ResolveInfo>() {
-            /**
-             * By label
-             *
-             * @param a First
-             * @param b Second
-             * @return Order
-             */
-            @Override
-            public int compare( ResolveInfo a, ResolveInfo b ) {
-                return a.loadLabel( fpm ).toString().compareToIgnoreCase( b.loadLabel( fpm ).toString() );
-            }
-        } );
-        String[] labels = new String[ apps.size() ];
-        for( int i = 0; i < apps.size(); i++ ) {
-            labels[ i ] = apps.get( i ).loadLabel( pm ) + "  (" + apps.get( i ).activityInfo.packageName + ")";
-        }
+        final PackageManager    fpm  = getPackageManager();
+        final List<ResolveInfo> apps = AppPicker.launchableApps( this );
+        final String[]          labels = AppPicker.labels( this, apps );
         new AlertDialog.Builder( this )
                 .setTitle( "Pick App" )
                 .setItems( labels, new DialogInterface.OnClickListener() {

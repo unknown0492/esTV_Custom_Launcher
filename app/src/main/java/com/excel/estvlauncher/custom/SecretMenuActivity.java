@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.ResolveInfo;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -15,6 +16,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.List;
+
 /**
  * The Secret Menu (opened by Menu on the home screen). Same look as esTVLauncher's ShortcutsActivity, without
  * room number / OTS / screen size, plus: box name, home buttons, CMS address, property ID and name, check-in, permission helper.
@@ -22,7 +25,7 @@ import android.widget.Toast;
 public class SecretMenuActivity extends Activity implements CheckInManager.Listener {
 
     private TextView tvMac, tvFirmware, tvVersion, tvInterface, tvPropertyId, tvPropertyName;
-    private Button   btBoxName, btIp, btCms, btLastCheckIn, btCheckNow, btHomeButtons, btAutoAllow;
+    private Button   btBoxName, btIp, btCms, btLastCheckIn, btCheckNow, btHomeButtons, btAutoAllow, btAutostart;
 
     /**
      * Builds the menu and wires the buttons
@@ -46,6 +49,7 @@ public class SecretMenuActivity extends Activity implements CheckInManager.Liste
         btLastCheckIn = findViewById( R.id.bt_last_checkin );
         btCheckNow    = findViewById( R.id.bt_check_now );
         btHomeButtons = findViewById( R.id.bt_home_buttons );
+        btAutostart   = findViewById( R.id.bt_autostart );
         btAutoAllow   = findViewById( R.id.bt_auto_allow );
 
         tvFirmware.setText( DeviceInfo.getFirmware() );
@@ -94,6 +98,13 @@ public class SecretMenuActivity extends Activity implements CheckInManager.Liste
             @Override
             public void onClick( View v ) {
                 startActivity( new Intent( SecretMenuActivity.this, HomeButtonsActivity.class ) );
+            }
+        } );
+        btAutostart.setOnClickListener( new View.OnClickListener() {
+            /** @param v Button */
+            @Override
+            public void onClick( View v ) {
+                chooseAutostart();
             }
         } );
         btAutoAllow.setOnClickListener( new View.OnClickListener() {
@@ -185,6 +196,50 @@ public class SecretMenuActivity extends Activity implements CheckInManager.Liste
         int count = prefs.getButtons().size();
         btHomeButtons.setText( "Edit (" + count + ( Prefs.SOURCE_LOCAL.equals( prefs.getButtonsSource() ) ? ", changed on this box)" : ", from CMS)" ) );
         btAutoAllow.setText( PermissionAutoAllowService.isEnabled( this ) ? "On" : "Off - Turn On" );
+        String autostart = prefs.getAutostartPackage();
+        btAutostart.setText( ( autostart.isEmpty() ? "None" : AutoStart.label( this, autostart ) )
+                             + ( Prefs.SOURCE_LOCAL.equals( prefs.getAutostartSource() ) ? " (this box)" : " (CMS)" ) );
+    }
+
+    /**
+     * Auto-start app of this box: None, back to the CMS setting, or an installed app. A choice here stays until
+     * the CMS setting changes (the newest change wins); a check-in starts at once so the CMS shows it.
+     */
+    private void chooseAutostart() {
+        final List<ResolveInfo> apps   = AppPicker.launchableApps( this );
+        String[]                labels = AppPicker.labels( this, apps );
+        final String[]          items  = new String[ labels.length + 2 ];
+        items[ 0 ] = "None";
+        items[ 1 ] = "Use the CMS setting";
+        System.arraycopy( labels, 0, items, 2, labels.length );
+        new AlertDialog.Builder( this )
+                .setTitle( "Auto-start App" )
+                .setItems( items, new DialogInterface.OnClickListener() {
+                    /**
+                     * Stores the choice and checks in
+                     *
+                     * @param dialog Dialog
+                     * @param which  Item index
+                     */
+                    @Override
+                    public void onClick( DialogInterface dialog, int which ) {
+                        Prefs prefs = new Prefs( SecretMenuActivity.this );
+                        if( which == 0 ) {
+                            prefs.setAutostartLocal( "", "" );
+                        }
+                        else if( which == 1 ) {
+                            prefs.resetAutostartToCms();
+                        }
+                        else {
+                            ResolveInfo app = apps.get( which - 2 );
+                            prefs.setAutostartLocal( app.activityInfo.packageName, app.activityInfo.name );
+                        }
+                        render();
+                        CheckInManager.checkIn( SecretMenuActivity.this, false );
+                    }
+                } )
+                .setNegativeButton( "Cancel", null )
+                .show();
     }
 
     /**

@@ -267,7 +267,12 @@ public final class CheckInManager {
                     .put( "apk_results", prefs.getApkResults() )
                     .put( "firmware", DeviceInfo.getFirmware() )
                     .put( "android", Build.VERSION.RELEASE )
-                    .put( "display", DisplayHelper.report() );
+                    .put( "display", DisplayHelper.report() )
+                    .put( "autostart", new JSONObject()
+                            .put( "package", prefs.getAutostartPackage() )
+                            .put( "activity", prefs.getAutostartActivity() )
+                            .put( "source", prefs.getAutostartSource() )
+                            .put( "rev", prefs.getAutostartRev() ) );
         }
         catch( JSONException e ) {
             throw new IOException( "request could not be built" );
@@ -275,12 +280,12 @@ public final class CheckInManager {
     }
 
     /**
-     * Applies a CMS answer: property, buttons, wallpaper, display, APKs
+     * Applies a CMS answer: property, buttons, wallpaper, display, auto-start app, APKs
      *
      * @param context Context
      * @param prefs   Stored state
      * @param a       CMS answer
-     * @return true when an APK was installed or failed, or the display was changed (worth reporting at once)
+     * @return true when an APK was installed or failed, or the display / auto-start app changed (worth reporting at once)
      */
     private static boolean handleAnswer( Context context, Prefs prefs, JSONObject a ) {
         int interval = a.optInt( "interval_sec", 300 );
@@ -302,10 +307,41 @@ public final class CheckInManager {
 
         String wallpaperNote = applyWallpaper( context, prefs, a.optJSONObject( "wallpaper" ) );
         String displayNote   = applyDisplay( prefs, a.optJSONObject( "display" ) );
+        String autostartNote = applyAutostart( context, prefs, a.optJSONObject( "autostart" ) );
         String apkNote       = applyApks( context, prefs, a.optJSONArray( "apks" ) );
 
-        prefs.setLastResult( stamp() + " OK (CMS " + prefs.getCmsHost() + ":" + prefs.getCmsPort() + ")" + wallpaperNote + displayNote + apkNote, true );
-        return !displayNote.isEmpty() || !apkNote.isEmpty();
+        prefs.setLastResult( stamp() + " OK (CMS " + prefs.getCmsHost() + ":" + prefs.getCmsPort() + ")" + wallpaperNote + displayNote + autostartNote + apkNote, true );
+        return !displayNote.isEmpty() || !autostartNote.isEmpty() || !apkNote.isEmpty();
+    }
+
+    /**
+     * Applies the CMS's auto-start app (docs/box-protocol.md): when its revision differs from the one last
+     * applied, it replaces the app - also one chosen in the Secret Menu (the newest change wins). The boot
+     * delay and the relaunch interval always come from the CMS.
+     *
+     * @param context   Context
+     * @param prefs     Stored state
+     * @param autostart { rev, package, activity, delay_sec, relaunch_min } or null
+     * @return Note for the result text ("" when the revision did not change)
+     */
+    private static String applyAutostart( Context context, Prefs prefs, JSONObject autostart ) {
+        if( autostart == null ) {
+            return "";
+        }
+        prefs.setAutostartTiming( Math.max( 0, Math.min( 120, autostart.optInt( "delay_sec", Prefs.DEFAULT_AUTOSTART_DELAY_SEC ) ) ),
+                                  Math.max( 0, Math.min( 1440, autostart.optInt( "relaunch_min", Prefs.DEFAULT_AUTOSTART_RELAUNCH_MIN ) ) ) );
+        String rev = autostart.optString( "rev", "" );
+        if( rev.equals( prefs.getAutostartRev() ) ) {
+            return "";
+        }
+        String pkg      = autostart.optString( "package", "" ).trim();
+        String activity = autostart.optString( "activity", "" ).trim();
+        if( pkg.equals( context.getPackageName() ) ) {     // Never this launcher itself
+            pkg      = "";
+            activity = "";
+        }
+        prefs.setAutostartFromCms( pkg, activity, rev );
+        return ". Auto-start: " + ( pkg.isEmpty() ? "none" : pkg );
     }
 
     /**
